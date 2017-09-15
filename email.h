@@ -23,7 +23,9 @@ private:
     QString m_body;
     QString readField(const QString &fieldName);
     void decodeQuotedPrintable(QString &text);
-    void cleanText(QString &text);
+    void cleanText(QString &text,const QStringList &fieldList);
+    QStringList m_EmailFieldsNormal;
+
 
 
 

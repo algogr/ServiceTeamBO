@@ -64,7 +64,7 @@ void MailReader::parseTicketList(int start)
 
         return;
     }
-    //qDebug()<<"clear"<<m_NewList[(m_ResponseId-10000)];
+
     QString test="SRS UID fetch "+m_NewTicketList[(m_ResponseId-20000)]+" BODY[text]" ;
     m_socket.write(test.toUtf8());
     m_socket.write("\r\n");

@@ -3,9 +3,16 @@
 #include "customer.h"
 #include "originator.h"
 #include <QDebug>
+#include <QRegExp>
 
 Email::Email(QObject *parent) : QObject(parent)
 {
+
+    m_EmailFieldsNormal<<"Title"<<"Company"<<"Service"<<"Interaction ID"\
+            <<"Service Recipient"<<"Location"<<"Department"<<"City"\
+           <<"County"<<"Address"<<"Email"<<"Phone"<<"Reported Date"\
+        <<"Urgency"<<"Priority"<<"Description"<<"Customer Ticket No"<<\
+        "Appointment From"<<"Appointment To";
 
 }
 
@@ -23,17 +30,18 @@ Ticket *Email::createTicket(const QList<QAbstractItemModel *> &tableList)
 {
 
     decodeQuotedPrintable(m_body);
-    int start=m_body.indexOf("<html");
-    int end=m_body.indexOf("</html");
-    m_body=m_body.mid(start,(end-start)+7);
-    cleanText(m_body);
+    //int start=m_body.indexOf("<html");
+    //int end=m_body.indexOf("</html");
+    //m_body=m_body.mid(start,(end-start)+7);
+    cleanText(m_body,m_EmailFieldsNormal);
 
     Originator* originator=new Originator;
     Customer* customer=new Customer;
     Ticket* ticket=new Ticket;
+    qDebug()<<"Cleaned Up::"<<m_body<<"End cleaned body";
 
     originator->setName(readField("Company"));
-    customer->setName(readField("Service Resipient"));
+    customer->setName(readField("Service Recipient"));
     customer->setLocation(readField("Location"));
     customer->setDepartment(readField("Department"));
     customer->setCity(readField("City"));
@@ -57,6 +65,10 @@ Ticket *Email::createTicket(const QList<QAbstractItemModel *> &tableList)
     ticket->setPriority(readField("Priority").left(1).toInt());
 
     originator->persist(tableList);
+    customer->persist(tableList);
+    qDebug()<<"Description:"<<ticket->Description();
+
+
 
 
 
@@ -73,36 +85,41 @@ Ticket *Email::createTicket(const QList<QAbstractItemModel *> &tableList)
 
 QString Email::readField(const QString &fieldName)
 {
-    int start,end;
+    //int start1,start2,start3,start4,end;
     if (fieldName=="Incident")
     {
         QRegExp inc("Incident");
         return m_body.mid(inc.indexIn(m_body)+9,8);
     }
-
-
-    start=m_body.indexOf(fieldName);
-    qDebug()<<"1.stat:"<<start;
-    start=m_body.indexOf("<td",start);
-    qDebug()<<"2.stat:"<<start;
-    start=m_body.indexOf("<span",start);
-    qDebug()<<"3.stat:"<<start;
-    start=m_body.indexOf(">",start);
-    qDebug()<<"4.stat:"<<start;
-    end=m_body.indexOf("<o:p>",start);
+    /*
+    qDebug()<<"FieldNmae:"<<fieldName;
+    start1=m_body.indexOf(fieldName+"<o:p>");
+    qDebug()<<"1.stat1:"<<start1;
+    start2=m_body.indexOf("<td",start1);
+    qDebug()<<"2.stat2:"<<start2;
+    start3=m_body.indexOf("<span",start2);
+    qDebug()<<"3.stat3:"<<start3;
+    start4=m_body.indexOf(">",start3);
+    qDebug()<<"4.stat4:"<<start4;
+    end=m_body.indexOf("<o:p>",start4);
     qDebug()<<"end:"<<end;
-    QString value=m_body.mid(start+1,end-start-1);
+    QString value=m_body.mid(start4+1,end-start4-1);
     value.trimmed();
+    */
+    int start=m_body.indexOf(fieldName)+fieldName.size()+1;
+    int end=m_body.indexOf("!@#",start);
+    QString value=m_body.mid(start,end-start);
+
     qDebug()<<"Mystr:"<<value;
+    //if (end-start4<=7)
+      //  value="";
     return value;
 }
 
-void Email::cleanText(QString &text)
+void Email::cleanText(QString &text,const QStringList &fieldList)
 {
     text.replace(" GMT+0300","");
     text.replace("=","");
-
-    text.replace(" ="," ");
     text.replace("  "," "); //2 space
     text.replace("   "," "); //3 space
     text.replace("    "," "); //4 space
@@ -112,15 +129,31 @@ void Email::cleanText(QString &text)
     text.replace("        "," "); //8 space
     text.replace("         "," "); //9 space
     text.replace("          "," ");
+
+    text.replace(QRegExp("<(?:[^>=]|='[^']*'|=""[^\"\"]*\"\"|=[^'\"\"][^\s>]*)*>"),"");
+    //text.replace(QRegExp("<(\\w+)")," ");
+    //text.replace(QRegExp("(?:[^>=]|='[^']*'|=\"[^\"]*\"|=[^'\"][^\s>]*)*>")," ");
+
+    for (int i=0;i<fieldList.size();i++)
+    {
+        text.replace(QRegExp(fieldList.at(i)),"!@#"+fieldList.at(i)+":");
+    }
+
+
+
 }
 
 void Email::decodeQuotedPrintable(QString &text)
 {
+    text.replace("\r\n","");
+    text.replace("==","=");
+    text.replace("=C2=Α0"," ");
+    text.replace("=CF","=CE");
     text.replace("=CE=82","ς");
     text.replace("=CE=83","σ");
     text.replace("=CE=84","τ");
-    text.replace("=CF","=CE");
-    text.replace("=CE=\r\n","=CE");
+
+
 
     text.replace("=CE=80","π");
     text.replace("=CE=81","ρ");
@@ -132,6 +165,7 @@ void Email::decodeQuotedPrintable(QString &text)
     text.replace("=CE=89","Ή");
     text.replace("=CE=8A","Ί");
     text.replace("=CE=8C","Ό");
+    text.replace("=CE=8D","ύ");
     text.replace("=CE=8E","Ύ");
     text.replace("=CE=8F","Ώ");
     text.replace("=CE=91","Α");
@@ -194,6 +228,6 @@ void Email::decodeQuotedPrintable(QString &text)
 
 
 
-    text.replace("\r\n","");
+
 
 }

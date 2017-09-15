@@ -1,6 +1,9 @@
 #include "customer.h"
-
-Customer::Customer(QObject *parent)
+#include "algosqltablemodel.h"
+#include <QSqlRecord>
+#include <QDebug>
+#include <QSqlError>
+Customer::Customer(QObject *parent):QObject()
 
 {
 
@@ -139,6 +142,54 @@ void Customer::setErpId(int ErpId)
 
 void Customer::persist(const QList<QAbstractItemModel*> &tableList)
 {
+    AlgoSqlTableModel *cl= qobject_cast<AlgoSqlTableModel*> (tableList.at(0));
+
+    cl->setTable("Customer");
+    cl->setFilter("phone1='"+Phone1()+"'");
+    cl->select();
+
+    //TODO  Add code when ERP connection is ready
+    if (cl->rowCount()==0)
+    {
+
+        cl->setFilter("");
+        cl->select();
+
+        QSqlRecord r= cl->record();
+        r.setValue("name",Name());
+        r.setValue("location",Location());
+        r.setValue("department",Department());
+        r.setValue("city",City());
+        r.setValue("county",County());
+        r.setValue("address",Address());
+        r.setValue("email",Email());
+        r.setValue("phone1",Phone1());
+        r.setValue("phone2",Phone2());
+        r.setValue("postalcode",PC());
+
+
+        cl->insertRecord(-1,r);
+        if(cl->submitAll()) {
+            cl->database().commit();
+        }
+        else {
+            cl->database().rollback();
+                    qDebug() << "Database Write Error" <<
+                         "The database reported an error: " <<
+                          cl->lastError().text();
+
+        }
+
+
+
+
+    }
+    else
+    {
+        return;
+
+    }
+
 
 }
 

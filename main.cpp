@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 
     //TODO parametric credentials
 
-    QSqlDatabase db1=QSqlDatabase::addDatabase("QMYSQL","local");
+    QSqlDatabase db1=QSqlDatabase::addDatabase("QMYSQL","algoservice");
     db1.setDatabaseName("ServiceTeam");
     db1.setHostName("localhost");
     db1.setPort(3306);
@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 
 
 
-    QSqlDatabase db2=QSqlDatabase::addDatabase("QMYSQL","erp");
+    QSqlDatabase db2=QSqlDatabase::addDatabase("QMYSQL","soft1");
     db2.setDatabaseName("hourglass");
     db2.setHostName("localhost");
     db2.setPort(3306);
@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
     cusEModel->select();
 
     AlgoSqlTableModel* origLModel = new AlgoSqlTableModel(0,db1);
+    //origLModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
     origLModel->setTable("Originator");
     origLModel->sort(1,Qt::SortOrder::AscendingOrder);
     origLModel->generateRoleNames();
@@ -77,14 +78,14 @@ int main(int argc, char *argv[])
 
 
     AlgoSqlTableModel* ticketLModel = new AlgoSqlTableModel(0,db1);
-    ticketLModel->setTable("Originator");
+    ticketLModel->setTable("Ticket");
     ticketLModel->sort(1,Qt::SortOrder::AscendingOrder);
     ticketLModel->generateRoleNames();
     ticketLModel->setFilter("");
     ticketLModel->select();
 
     AlgoSqlTableModel* ticketEModel = new AlgoSqlTableModel(0,db2);
-    ticketEModel->setTable("Originator");
+    ticketEModel->setTable("Ticket");
     ticketEModel->sort(1,Qt::SortOrder::AscendingOrder);
     ticketEModel->generateRoleNames();
     ticketEModel->setFilter("");
