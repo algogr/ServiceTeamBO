@@ -1,6 +1,7 @@
-QT += qml quick sql
+QT += qml quick sql positioning location
 
 CONFIG += c++11
+
 
 SOURCES += main.cpp \
     ticket.cpp \
@@ -10,7 +11,10 @@ SOURCES += main.cpp \
     email.cpp \
     algosqlquerymodel.cpp \
     algosqlrelationaltablemodel.cpp \
-    algosqltablemodel.cpp
+    algosqltablemodel.cpp \
+    algolocation.cpp \
+    algogmapsapimanipulator.cpp \
+    ticketmanager.cpp
 
 RESOURCES += qml.qrc
 
@@ -44,5 +48,8 @@ HEADERS += \
     email.h \
     algosqlquerymodel.h \
     algosqlrelationaltablemodel.h \
-    algosqltablemodel.h
+    algosqltablemodel.h \
+    algolocation.h \
+    algogmapsapimanipulator.h \
+    ticketmanager.h
 

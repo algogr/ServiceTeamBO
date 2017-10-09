@@ -4,7 +4,8 @@
 #include <QSqlError>
 #include <QSqlRecord>
 
-Originator::Originator(QObject *parent)
+Originator::Originator(QObject *parent):m_Id(),m_ErpId(),m_code(),m_Name()
+
 
 {
 
@@ -44,49 +45,23 @@ void Originator::setErpId(int ErpId)
 void Originator::persist(const QList<QAbstractItemModel *> &tableList)
 {
 
-    AlgoSqlTableModel *ol= qobject_cast<AlgoSqlTableModel*> (tableList.at(2));
-
-    ol->setTable("Originator");
-    ol->setFilter("name='"+Name()+"'");
-    ol->select();
-    qDebug()<<"Row with name WIND:"<<ol->rowCount();
-    //TODO  Add code when ERP connection is ready
-    if (ol->rowCount()==0)
-    {
-
-        ol->setFilter("");
-        ol->select();
-
-        QSqlRecord r= ol->record();
-        r.setValue("name",Name());
-        ol->insertRecord(-1,r);
-        if(ol->submitAll()) {
-            ol->database().commit();
-        }
-        else {
-            ol->database().rollback();
-                    qDebug() << "Database Write Error" <<
-                         "The database reported an error: " <<
-                          ol->lastError().text();
-
-        }
-
-
-
-
-    }
-    else
-    {
-        return;
-
-    }
-
+    retrieve(tableList);
 
 }
 
 
 void Originator::retrieve(const QList<QAbstractItemModel*> &tableList)
 {
+    AlgoSqlTableModel *ol= qobject_cast<AlgoSqlTableModel*> (tableList.at(2));
+    QVariant erpid=ErpId();
+
+    ol->setTable("Originator");
+    ol->setFilter("erpid="+erpid.toString());
+    ol->select();
+
+    setId(ol->data(ol->index(0,0)).toInt());
+    setName(ol->data(ol->index(0,2)).toString());
+
 
 }
 

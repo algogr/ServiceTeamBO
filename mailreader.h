@@ -37,10 +37,12 @@ private:
 
 signals:
 
+
 public slots:
 
     void connected();
     void readyRead();
+
 
 };
 

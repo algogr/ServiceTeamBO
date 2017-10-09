@@ -1,6 +1,14 @@
 #include "ticket.h"
+#include "algosqltablemodel.h"
+#include <QSqlRecord>
+#include <QDebug>
+#include <QSqlError>
 
-Ticket::Ticket(QObject *parent)
+Ticket::Ticket(QObject *parent):QObject(),m_id(),m_ErpId(),m_Incident(),\
+    m_Originator(),m_Customer(),m_Title(),m_Service(),\
+    m_ReportedDate(),m_Priority(),m_Description(),\
+    m_CustomerTicketNo(),m_AppointmentFrom(),m_AppointmentTo()
+
 
 {
 
@@ -26,15 +34,6 @@ void Ticket::setTitle(const QString &Title)
     m_Title = Title;
 }
 
-QString Ticket::InteractionId() const
-{
-    return m_InteractionId;
-}
-
-void Ticket::setInteractionId(const QString &InteractionId)
-{
-    m_InteractionId = InteractionId;
-}
 
 QString Ticket::Description() const
 {
@@ -117,15 +116,6 @@ void Ticket::setService(const QString &Service)
     m_Service = Service;
 }
 
-int Ticket::Urgency() const
-{
-    return m_Urgency;
-}
-
-void Ticket::setUrgency(int Urgency)
-{
-    m_Urgency = Urgency;
-}
 
 int Ticket::Priority() const
 {
@@ -159,6 +149,59 @@ void Ticket::setErpId(int ErpId)
 
 void Ticket::persist(const QList<QAbstractItemModel *> &tableList)
 {
+    AlgoSqlTableModel *tl= qobject_cast<AlgoSqlTableModel*> (tableList.at(4));
+
+    tl->setTable("Ticket");
+    qDebug()<<"Rows:"<<tl->rowCount();
+    tl->setFilter("incident='"+Incident()+"'");
+    tl->select();
+
+    //TODO  Add code when ERP connection is ready
+    if (tl->rowCount()==0)
+    {
+
+        tl->setFilter("");
+        tl->select();
+
+        QSqlRecord r= tl->record();
+        r.setValue("originatorid",m_Originator->Id());
+        qDebug()<<"OriginatorId"<<m_Originator->Id();
+        qDebug()<<"CustomerId"<<m_Customer->Id();
+        r.setValue("cusid",m_Customer->Id());
+        r.setValue("erpcusid",m_Customer->ErpId());
+        r.setValue("title",Title());
+        r.setValue("service",Service());
+        r.setValue("reporteddate",ReportedDate());
+        r.setValue("priority",Priority());
+        r.setValue("description",Description());
+        r.setValue("customerticketno",CustomerTicketNo());
+        r.setValue("appointmentfrom",AppointmentFrom());
+        r.setValue("appointmentto",AppointmentTo());
+        r.setValue("incident",Incident());
+        r.setValue("department",Department());
+
+        tl->insertRecord(-1,r);
+        if(tl->submitAll()) {
+            qDebug()<<"Commit:"<<Incident();
+            tl->database().commit();
+        }
+        else {
+            tl->database().rollback();
+                    qDebug() << "Database Write Error" <<
+                         "The database reported an error: " <<
+                          tl->lastError().text();
+
+        }
+
+
+
+
+    }
+    else
+    {
+        return;
+
+    }
 
 }
 
@@ -166,4 +209,14 @@ void Ticket::persist(const QList<QAbstractItemModel *> &tableList)
 void Ticket::retrieve(const QList<QAbstractItemModel*> &tableList)
 {
 
+}
+
+QString Ticket::Department() const
+{
+    return m_Department;
+}
+
+void Ticket::setDepartment(const QString &Department)
+{
+    m_Department = Department;
 }

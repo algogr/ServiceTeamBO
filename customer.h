@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QtSql/QSqlDatabase>
 #include "algosqlquerymodel.h"
+#include "algosqltablemodel.h"
 
 
 
@@ -22,8 +23,6 @@ public:
     Q_INVOKABLE QString Location() const;
     Q_INVOKABLE void setLocation(const QString &Location);
 
-    Q_INVOKABLE QString Department() const;
-    Q_INVOKABLE void setDepartment(const QString &Department);
 
     Q_INVOKABLE QString City() const;
     Q_INVOKABLE void setCity(const QString &City);
@@ -56,10 +55,27 @@ public:
 
     void persist(const QList<QAbstractItemModel*> &tableList);
     void retrieve(const QList<QAbstractItemModel*> &tableList);
+    void createToErp(AlgoSqlTableModel* model);
+    void createToLocal(AlgoSqlTableModel* model);
+
+
+    QString LoopNumber() const;
+    void setLoopNumber(const QString &LoopNumber);
+
+    int OriginatorId() const;
+    void setOriginatorId(int OriginatorId);
+
+    double Longitude() const;
+    void setLongitude(double Longitude);
+
+    double Latitude() const;
+    void setLatitude(double Latitude);
 
 private:
-    QString m_Code,m_Name,m_Location,m_Department,m_City,m_County,m_Address,m_Email,m_Phone1,m_Phone2,m_PC;
-    int m_Id,m_ErpId;
+    QString m_Code,m_Name,m_Location,m_City,m_County,m_Address,m_Email,m_Phone1,m_Phone2,m_PC,m_LoopNumber;
+    int m_Id,m_ErpId,m_OriginatorId;
+    double m_Longitude,m_Latitude;
+    int fetchLastErpid(AlgoSqlTableModel *model);
 
 
 

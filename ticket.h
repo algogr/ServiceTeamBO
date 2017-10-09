@@ -20,9 +20,6 @@ public:
     QString Title() const;
     void setTitle(const QString &Title);
 
-    QString InteractionId() const;
-    void setInteractionId(const QString &InteractionId);
-
     QString Description() const;
     void setDescription(const QString &Description);
 
@@ -47,8 +44,6 @@ public:
     QString Service() const;
     void setService(const QString &Service);
 
-    int Urgency() const;
-    void setUrgency(int Urgency);
 
     int Priority() const;
     void setPriority(int Priority);
@@ -61,12 +56,15 @@ public:
 
     void persist(const QList<QAbstractItemModel*> &tableList);
     void retrieve(const QList<QAbstractItemModel*> &tableList);
+    QString Department() const;
+    void setDepartment(const QString &Department);
+
 private:
-    QString m_Incident,m_Title,m_InteractionId,m_Description,m_CustomerTicketNo,m_Service;
+    QString m_Incident,m_Title,m_Description,m_CustomerTicketNo,m_Service,m_Department;
     Originator* m_Originator;
     Customer* m_Customer;
     QDateTime m_ReportedDate,m_AppointmentFrom,m_AppointmentTo;
-    int m_id,m_ErpId,m_Urgency,m_Priority;
+    int m_id,m_ErpId,m_Priority;
 
 
 

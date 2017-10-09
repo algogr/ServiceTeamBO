@@ -1,13 +1,19 @@
 #include "mailreader.h"
 #include "ticket.h"
 #include "customer.h"
+#include <QTimer>
+#include <QEventLoop>
 
 MailReader::MailReader(QObject *parent,const QList<QAbstractItemModel*> &tablelist) : QObject(parent),m_socket(),\
     m_ResponseId(0),m_NewList(),m_ResponseComplete(true),m_Response(),\
     m_NewTicketList(),m_EmailList()
 {
+
     m_TableList=tablelist;
+
     connectIMAP();
+
+
 }
 
 QList<int> MailReader::fetchNewUIDs()
@@ -22,8 +28,10 @@ QString decodeQuotedPrintable(const QString &text);
 
 void MailReader::connectIMAP()
 {
+
     connect(&m_socket,SIGNAL(encrypted()),this,SLOT(connected()));
     connect(&m_socket,SIGNAL(readyRead()),this,SLOT(readyRead()));
+
     //TODO Check netwotk connection
     //TODO Parametetric
     m_socket.connectToHostEncrypted("imap.gmail.com", 993);
@@ -73,7 +81,8 @@ void MailReader::parseTicketList(int start)
 
 void MailReader::processEmailList()
 {
-    QString decodedText;
+
+
     for (int i=0;i<m_EmailList.size();i++)
     {
         //TODO EDO EIMAI 1
@@ -83,12 +92,15 @@ void MailReader::processEmailList()
 
 
     }
+    this->deleteLater();
 
 
 }
 
 void MailReader::connected()
 {
+    qDebug()<<"EDO EIMAI";
+
     //TODO Parametetric
     QString credentials="001 login algosakis@gmail.com v@$230698";
     m_socket.write(credentials.toUtf8());
@@ -132,6 +144,7 @@ void MailReader::readyRead()
 
 
         }
+
         m_ResponseComplete=true;
         QString list="SR1 UID SEARCH UNSEEN";
         m_socket.write(list.toUtf8());
@@ -152,6 +165,7 @@ void MailReader::readyRead()
         //qDebug()<<"1:"<<m_Response;
         QRegExp regxp1("SEARCH ");
         QRegExp regxp2("\r\nSR1");
+
         int start=regxp1.indexIn(m_Response)+7;
         int end=regxp2.indexIn(m_Response);
         m_Response=m_Response.mid(start,end-start);
@@ -183,6 +197,13 @@ void MailReader::readyRead()
             {
               m_NewTicketList.append(m_NewList[(m_ResponseId-10001)]);
             }
+
+            regxp.setPattern("SR [1-9]-");
+            if(regxp.indexIn(m_Response)>0)
+            {
+
+              m_NewTicketList.append(m_NewList[(m_ResponseId-10001)]);
+            }
             //qDebug()<<m_Response;
 
             clearNewList(m_ResponseId);
@@ -197,7 +218,7 @@ void MailReader::readyRead()
 
     if (m_ResponseId>20000 && m_ResponseId<30000)
     {
-        qDebug()<<"Loopa"<<m_ResponseId-20000;
+        //qDebug()<<"Loopa"<<m_ResponseId-20000;
         m_ResponseComplete=false;
         while(m_socket.bytesAvailable()>0)
         {
@@ -215,7 +236,7 @@ void MailReader::readyRead()
             email->setBody(m_Response);
             m_EmailList.append(email);
 
-            qDebug()<<m_Response;
+            //qDebug()<<m_Response;
 
             parseTicketList(m_ResponseId);
 
@@ -227,3 +248,5 @@ void MailReader::readyRead()
 
 
 }
+
+
