@@ -13,19 +13,23 @@ class Email : public QObject
 public:
     explicit Email(QObject *parent = nullptr);
 
-    QString body() const;
-    void setBody(const QString &body);
+    QByteArray body() const;
+    void setBody(const QByteArray &body);
     Ticket* createTicket(const QList<QAbstractItemModel*>& tableList);
 
 
 
+    QString BodytoString() const;
+    void setBodytoString(const QString &BodytoString);
+
 private:
-    QString m_body;
+    QByteArray m_body;
+    QString m_BodytoString;
     QString readField(const QString &fieldName);
     void decodeQuotedPrintable(QString &text);
     void cleanText(QString &text,const QStringList &fieldList);
     QStringList m_EmailFieldsNormal,m_EmailFieldsOpap;
-    void parseDescription(Customer* cptr);
+    void parseDescription(Customer* cptr,Ticket* tptr);
 
 
 

@@ -14,7 +14,7 @@ void TicketManager::timerTimeout()
     //QEventLoop loop;
     //MailReader* reader=new MailReader(0,m_TableList);
     MailReader* reader=new MailReader(0,m_TableList);
-    m_Timer.start(120000);
+    m_Timer.start(600000);
     //loop.exec();
     //reader->deleteLater();
 }

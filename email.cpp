@@ -4,8 +4,10 @@
 #include "originator.h"
 #include <QDebug>
 #include <QRegExp>
+#include <QMutex>
+#include <QThread>
 
-Email::Email(QObject *parent) : QObject(parent),m_EmailFieldsNormal(),m_EmailFieldsOpap()
+Email::Email(QObject *parent) : QObject(parent),m_EmailFieldsNormal(),m_EmailFieldsOpap(),m_BodytoString()
 {
 
     m_EmailFieldsNormal<<"Incident"<<"Title"<<"Company"<<"  Service"<<"Interaction ID"\
@@ -15,83 +17,95 @@ Email::Email(QObject *parent) : QObject(parent),m_EmailFieldsNormal(),m_EmailFie
                       "Appointment From"<<"Appointment To";
 
     m_EmailFieldsOpap<<"Service Request"<<"POS Name:"<<"POS Code:"<<"Main Phone:"<<"Secondary Phone:"<<"Code Type:"\
-                    <<"Date Opened:"<<"Response Time:"<<"Extra Phone:"<<"SR Owner:";
+                    <<"Date Opened:"<<"Response Time:"<<"Extra Phone:"<<"SR Owner:"<<"Status:";
 
 
 }
 
-QString Email::body() const
+QByteArray Email::body() const
 {
     return m_body;
 }
 
-void Email::setBody(const QString &body)
+void Email::setBody(const QByteArray &body)
 {
     m_body = body;
 }
 
 Ticket *Email::createTicket(const QList<QAbstractItemModel *> &tableList)
 {
+    QMutex mutex;
+    mutex.lock();
     Originator* originator=new Originator;
     Customer* customer=new Customer;
     Ticket* ticket=new Ticket;
     QLocale::setDefault(QLocale::English);
 
-    qDebug()<<"TESTBODYOPAO:"<<m_body<<"ENDOFTEESTBODY";
+
 
     if (!m_body.contains("Incident"))
     {
         //QByteArray enc=QByteArray::fromBase64(m_body.toUtf8());
-        QByteArray enc=m_body.toUtf8();
-        enc=QByteArray::fromBase64(enc);
-        m_body= QString::fromUtf8(enc);
-        cleanText(m_body,m_EmailFieldsOpap);
+
+        m_body.replace("\r\n","");
+        int r=m_body.indexOf("}");
+        m_body=m_body.mid(r,-1);
+
+        m_BodytoString=QString::fromUtf8(QByteArray::fromBase64(m_body));
+
+        m_BodytoString=QString::fromUtf8(QByteArray::fromBase64(m_body));
+        cleanText(m_BodytoString,m_EmailFieldsOpap);
         originator->setErpId(4);
-        qDebug()<<"OPAP BODY"<<m_body;
-        customer->setName(readField("POS Name:"));
-        customer->setLocation(readField("POS Code:"));
-        customer->setPhone1(readField("Main Phone:"));
-        customer->setPhone2(readField("Secondary Phone:"));
+
+        customer->setName(readField("POS Name:").left(255));
+        customer->setLocation(readField("POS Code:").left(255));
+        customer->setPhone1(readField("Main Phone:").remove("'").left(20));
+        customer->setPhone2(readField("Secondary Phone:").remove("'").left(20));
         customer->setOriginatorId(originator->ErpId());
 
 
 
         ticket->setOriginator(originator);
         ticket->setCustomer(customer);
-        ticket->setTitle(readField("Code:"));
-        ticket->setIncident(readField("Service Request"));
+        ticket->setTitle(readField("Code Type:").left(50));
 
-        ticket->setReportedDate(QLocale().toDateTime(readField("Date Opened:"),"ddd MMM d yyyy hh:mm:ss"));
+        ticket->setIncident(readField("Service Request:").left(30));
+
+        ticket->setReportedDate(QLocale().toDateTime(readField("Date Opened:"),"dd/MM/yyyy hh:mm:ss"));
         //ticket->setDescription(m_body);
 
-        ticket->setAppointmentFrom(QLocale().toDateTime(readField("Response Time:"),"ddd MMM d yyyy hh:mm:ss"));
+        ticket->setAppointmentFrom(QLocale().toDateTime(readField("Response Time:"),"dd/MM/yyyy hh:mm:ss"));
+        ticket->setTrnDate(QDateTime::currentDateTime());
+        ticket->setDescription(m_BodytoString);
+        ticket->setCustomerTicketNo(ticket->Incident());
 
 
     }
     else
     {
-        decodeQuotedPrintable(m_body);
-        cleanText(m_body,m_EmailFieldsNormal);
+        m_BodytoString=QString::fromUtf8(m_body);
+        decodeQuotedPrintable(m_BodytoString);
+        cleanText(m_BodytoString,m_EmailFieldsNormal);
         QString company=readField("Company");
-        if (company=="CARDLINK")
+        if (company.contains("CARDLINK"))
         {
             originator->setErpId(9);
 
         }
 
-        if (company=="FIELD")
+        if (company.contains("FIELD"))
         {
             originator->setErpId(8);
 
         }
 
-        if (company=="WIND")
+        if (company.contains("WIND"))
         {
             originator->setErpId(2);
 
         }
 
-        if (company=="HOL")
+        if (company.contains("HOL"))
         {
             QString customerTicket=readField("Customer Ticket No");
             if (customerTicket.contains("H"))
@@ -104,37 +118,45 @@ Ticket *Email::createTicket(const QList<QAbstractItemModel *> &tableList)
         }
 
 
-        customer->setName(readField("Recipient"));
-        customer->setLocation(readField("Location"));
-        customer->setCity(readField("City"));
-        customer->setCounty(readField("County"));
-        customer->setAddress(readField("Address"));
+        customer->setName(readField("Recipient").left(255));
+        customer->setLocation(readField("Location").left(255));
+        customer->setCity(readField("City").left(255));
+        customer->setCounty(readField("County").left(255));
+        customer->setAddress(readField("Address").left(255));
         customer->setEmail(readField("Email"));
-        customer->setPhone2(readField("Phone"));
+        customer->setPhone2(readField("Phone").remove("'").left(20));
         customer->setOriginatorId(originator->ErpId());
-        parseDescription(customer);
+
+
 
         ticket->setOriginator(originator);
         ticket->setCustomer(customer);
         ticket->setIncident(readField("Incident"));
-        ticket->setTitle(readField("Title"));
+        ticket->setTitle(readField("Title").left(50));
         ticket->setService(readField("Service"));
-        ticket->setDepartment(readField("Department"));
+        ticket->setDepartment(readField("Department").left(30));
 
         ticket->setReportedDate(QLocale().toDateTime(readField("Reported Date"),"ddd MMM d yyyy hh:mm:ss"));
         ticket->setDescription(readField("Description"));
-        ticket->setCustomerTicketNo(readField("Customer Ticket No"));
+        ticket->setCustomerTicketNo(readField("Customer Ticket No").left(50));
         //TODO Parametric date format
         ticket->setAppointmentFrom(QLocale().toDateTime(readField("Appointment From"),"ddd MMM d yyyy hh:mm:ss"));
+        qDebug()<<"APPPPPPP"<<ticket->AppointmentFrom();
         ticket->setAppointmentTo(QLocale().toDateTime(readField("Appointment To"),"ddd MMM d yyyy hh:mm:ss"));
+        ticket->setTrnDate(QDateTime::currentDateTime());
+
 
         ticket->setPriority(readField("Priority").left(1).toInt());
+
+        parseDescription(customer,ticket);
+
+
 
     }
 
 
 
-    qDebug()<<"!st step:"<<originator->ErpId();
+
 
 
 
@@ -143,12 +165,13 @@ Ticket *Email::createTicket(const QList<QAbstractItemModel *> &tableList)
 
 
     originator->persist(tableList);
+    QThread::msleep(1000);
     customer->persist(tableList);
+    QThread::msleep(5000);
     ticket->persist(tableList);
-    qDebug()<<"OriginatorId:"<<originator->Id();
-    qDebug()<<"CustomerId:"<<customer->Id();
-    qDebug()<<"Description:"<<ticket->Description();
+    QThread::msleep(5000);
 
+mutex.unlock();
 
 
 
@@ -164,12 +187,22 @@ Ticket *Email::createTicket(const QList<QAbstractItemModel *> &tableList)
 
 }
 
+QString Email::BodytoString() const
+{
+    return m_BodytoString;
+}
+
+void Email::setBodytoString(const QString &BodytoString)
+{
+    m_BodytoString = BodytoString;
+}
+
 QString Email::readField(const QString &fieldName)
 {
     QString sf("!@#"+fieldName+":");
-    int start=m_body.indexOf(sf,0)+fieldName.size()+4;
-    int end=m_body.indexOf("!@#",start);
-    QString value=m_body.mid(start,end-start).trimmed();
+    int start=m_BodytoString.indexOf(sf,0)+fieldName.size()+4;
+    int end=m_BodytoString.indexOf("!@#",start);
+    QString value=m_BodytoString.mid(start,end-start).trimmed();
     if (fieldName=="Phone")
     {
         value.replace("+0030","");
@@ -189,6 +222,15 @@ QString Email::readField(const QString &fieldName)
         int r=rg.indexIn(value);
         QStringList testlist=rg.capturedTexts();
         value=testlist[0];
+    }
+
+    if (fieldName=="Service Request:")
+    {
+        QRegExp rg("[0-9]{1}\-[0-9]{8,}");
+        int r=rg.indexIn(m_BodytoString);
+        QStringList testlist=rg.capturedTexts();
+        value=testlist[0];
+
     }
     /*
     if (fieldName=="Appointment To")
@@ -210,6 +252,7 @@ void Email::cleanText(QString &text,const QStringList &fieldList)
     //OPAP TILL HEre
     text.replace("C2A0"," ");
     text.replace(" GMT+0300","");
+    text.replace(" GMT+0200","");
     text.replace("=","");
     text.replace("  "," "); //2 space
     text.replace("   "," "); //3 space
@@ -234,25 +277,73 @@ void Email::cleanText(QString &text,const QStringList &fieldList)
     //Special replacements
 
     text.replace("Service Recipient","Recipient");
-    qDebug()<<"CleanedTex:"<<text<<"End of Cleaned Text";
+
 
 
 
 }
 
-void Email::parseDescription(Customer *cptr)
+void Email::parseDescription(Customer *cptr,Ticket* tptr)
 {
     QString description=readField("Description");
     QRegExp landline("2[0-9]{9}");
     QRegExp mobile("6[0-9]{9}");
     QRegExp loopnumber("21[BbΒβ][0-9]{7}");
     if (landline.indexIn(description)>0)
-        cptr->setPhone1(description.mid(landline.indexIn(description),10));
+        cptr->setPhone1(description.mid(landline.indexIn(description),10).remove("'"));
     //TODO Αν υπάρχει ήδη το κινητο στο phone να μην το ξαναπροσθέτει
     if (mobile.indexIn(description)>0)
-        cptr->setPhone2(description.mid(mobile.indexIn(description),10)+","+cptr->Phone2());
+        cptr->setPhone2(description.mid(mobile.indexIn(description),10).remove("'")+","+cptr->Phone2().remove("'"));
     if (loopnumber.indexIn(description)>0)
         cptr->setLoopNumber(description.mid(loopnumber.indexIn(description),10));
+    QRegExp subCategory("#Σύμπτωμα βλάβης:");
+    if (subCategory.indexIn(description)>0)
+    {
+        int start=subCategory.indexIn(description);
+        QString part=description.mid(start+17,-1);
+        int end=part.indexOf("#");
+        part=part.left(end);
+        tptr->setSubCategory(part);
+
+    }
+
+    QRegExp eskalit("#Όριο στο εσκαλίτ:");
+    if (eskalit.indexIn(description)>0)
+    {
+        int start=eskalit.indexIn(description);
+        QString part=description.mid(start+18,-1);
+        int end=part.indexOf("#");
+        part=part.left(end);
+        tptr->setEscalit(part);
+        qDebug()<<"ΕΣΚΑΛΙΤ"<<tptr->Escalit();
+
+    }
+
+    eskalit.setPattern("Escalate Limit:");
+    if (eskalit.indexIn(description)>0)
+    {
+        int start=eskalit.indexIn(description);
+        QString part=description.mid(start+15,-1);
+        int end=part.indexOf(":");
+        part=part.left(end-3);
+        tptr->setEscalit(part);
+        qDebug()<<"ΕSCALIT:"<<tptr->Escalit();
+
+    }
+
+
+    QRegExp oteport("OTE Port:");
+    if (oteport.indexIn(description)>0)
+    {
+        int start=oteport.indexIn(description);
+        QString part=description.mid(start+9,-1);
+        int end=part.indexOf("OTE Site");
+        part=part.left(end);
+        tptr->setOtePort(part);
+
+    }
+
+
 
 
 

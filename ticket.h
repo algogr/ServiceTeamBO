@@ -6,6 +6,7 @@
 #include "originator.h"
 #include <QDateTime>
 #include <QSqlDatabase>
+#include "algosqltablemodel.h"
 
 
 class Ticket : public QObject
@@ -59,12 +60,36 @@ public:
     QString Department() const;
     void setDepartment(const QString &Department);
 
+    QDateTime trnDate() const;
+    void setTrnDate(const QDateTime &trnDate);
+
+    QString Escalit() const;
+    void setEscalit(const QString &Escalit);
+
+    QString Job() const;
+    void setJob(const QString &Job);
+
+    QString SubJob() const;
+    void setSubJob(const QString &SubJob);
+
+    QString Category() const;
+    void setCategory(const QString &Category);
+
+    QString SubCategory() const;
+    void setSubCategory(const QString &SubCategory);
+
+    QString otePort() const;
+    void setOtePort(const QString &otePort);
+
 private:
     QString m_Incident,m_Title,m_Description,m_CustomerTicketNo,m_Service,m_Department;
+    QString m_Escalit,m_Job,m_SubJob,m_Category,m_SubCategory,m_otePort;
     Originator* m_Originator;
     Customer* m_Customer;
-    QDateTime m_ReportedDate,m_AppointmentFrom,m_AppointmentTo;
+    QDateTime m_ReportedDate,m_AppointmentFrom,m_AppointmentTo,m_trnDate;
     int m_id,m_ErpId,m_Priority;
+    void createToErp(AlgoSqlTableModel* model);
+    void createToLocal(AlgoSqlTableModel* model);
 
 
 

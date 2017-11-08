@@ -46,6 +46,11 @@ public:
     Q_INVOKABLE void setPC(const QString &PC);
 
 
+    void persist(const QList<QAbstractItemModel*> &tableList);
+    void retrieve(const QList<QAbstractItemModel*> &tableList);
+
+
+
 
     int Id() const;
     void setId(int Id);
@@ -53,10 +58,7 @@ public:
     int ErpId() const;
     void setErpId(int ErpId);
 
-    void persist(const QList<QAbstractItemModel*> &tableList);
-    void retrieve(const QList<QAbstractItemModel*> &tableList);
-    void createToErp(AlgoSqlTableModel* model);
-    void createToLocal(AlgoSqlTableModel* model);
+
 
 
     QString LoopNumber() const;
@@ -71,11 +73,17 @@ public:
     double Latitude() const;
     void setLatitude(double Latitude);
 
+
+
 private:
     QString m_Code,m_Name,m_Location,m_City,m_County,m_Address,m_Email,m_Phone1,m_Phone2,m_PC,m_LoopNumber;
     int m_Id,m_ErpId,m_OriginatorId;
     double m_Longitude,m_Latitude;
     int fetchLastErpid(AlgoSqlTableModel *model);
+    void createToErp(AlgoSqlTableModel* model);
+    void createToLocal(AlgoSqlTableModel* model);
+    QString createErpCode(AlgoSqlTableModel* model);
+
 
 
 

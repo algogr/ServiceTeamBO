@@ -7,34 +7,64 @@
 #include <QSqlError>
 #include "algosqltablemodel.h"
 #include <QAbstractItemModel>
+#include <QSqlQuery>
 #include "algolocation.h"
 #include "ticketmanager.h"
-
+#include <QFile>
+#include <QDir>
+#include <QSettings>
 int main(int argc, char *argv[])
 {
+    QFile st(QDir::currentPath()+"/settings.ini");
+    QString settingsFile=QDir::currentPath()+"/settings.ini";
+    QSettings *settings=new QSettings(settingsFile,QSettings::IniFormat);
+
+    if (!st.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+
+        settings->setValue("dsnMySQL","serviceteam");
+        settings->setValue("hostnameMySQL","localhost");
+        settings->setValue("dsnSQLServer","soft1");
+        settings->setValue("userSQLServer","sa");
+        settings->setValue("passSQLServer","tt123!@#");
+        settings->setValue("excelFullPath","c:\\jim\\tsolakidi.xls");
+        settings->setValue("batchFilesPath","C:\\algo\\AutoImport\\");
+        settings->setValue("cusBatchFilename","AutoRunCusImport.bat");
+        settings->setValue("salBatchFilename","AutoRunSalImport.bat");
+        settings->setValue("imapHostname","imap.gmail.com");
+        settings->setValue("imapPort",993);
+        settings->setValue("imapUser","algosakis@gmail.com");
+        settings->setValue("imapPass","v@$230698");
+        settings->sync();
+    }
+    st.close();
+
+
+
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QGuiApplication app(argc, argv);
 
     QList <QAbstractItemModel*> TableModelsList;
 
-    //TODO parametric credentials
 
-    QSqlDatabase db1=QSqlDatabase::addDatabase("QMYSQL","serviceteam");
-    db1.setDatabaseName("ServiceTeam");
-    db1.setHostName("localhost");
-    db1.setPort(3306);
-    db1.setUserName("root");
-    db1.setPassword("101264");
+
+    QSqlDatabase db1=QSqlDatabase::addDatabase("QODBC3",settings->value("dsnMySQL").toString());
+    db1.setDatabaseName(settings->value("dsnMySQL").toString());
+    db1.setHostName(settings->value("hostnameMySQL").toString());
 
 
 
-    QSqlDatabase db2=QSqlDatabase::addDatabase("QODBC3","soft1");
+    QSqlDatabase db2=QSqlDatabase::addDatabase("QODBC3",settings->value("dsnSQLServer").toString());
 
-    db2.setDatabaseName("soft1");
-    db2.setHostName("192.168.2.248");
-    db2.setPort(1433);
-    db2.setUserName("sa");
-    db2.setPassword("600096");
+    db2.setDatabaseName(settings->value("dsnSQLServer").toString());
+
+    db2.setUserName(settings->value("userSQLServer").toString());
+    db2.setPassword(settings->value("passSQLServer").toString());
+
+
+    QSqlDatabase db3=QSqlDatabase::addDatabase("QODBC3");
+    db3.setDatabaseName("DRIVER={Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)};DBQ="+QString(settings->value("excelFullPath").toString()));
+
 
     if (db1.open()==false)
     {
@@ -46,6 +76,23 @@ int main(int argc, char *argv[])
     if (db2.open()==false)
     {
         qDebug()<<"Error on Soft1:"<< db2.lastError().text();
+        exit(0);
+    }
+
+    if (db3.open()==false)
+    {
+        qDebug()<<"Error on Excel:"<< db3.lastError().text();
+        //exit(0);
+    }
+    else
+    {
+        qDebug()<<db3.isOpen();
+        QSqlQuery query(db3);
+        query.exec("select * from [WorkOrders$]");
+        while (query.next())
+        {
+            qDebug()<<query.value(0).toString();
+        }
         //exit(0);
     }
 
@@ -98,7 +145,7 @@ int main(int argc, char *argv[])
     ticketEModel->select();
 
     AlgoSqlTableModel* customerTempEModel = new AlgoSqlTableModel(0,db2);
-    customerTempEModel->setTable("CCCTEST1");
+    customerTempEModel->setTable("CCCTEMPCUST");
     customerTempEModel->sort(1,Qt::SortOrder::AscendingOrder);
     customerTempEModel->generateRoleNames();
     customerTempEModel->setFilter("");
@@ -112,7 +159,6 @@ int main(int argc, char *argv[])
     TableModelsList.append(ticketEModel); //5
     TableModelsList.append(customerTempEModel);//6
 
-
     //MailReader* rd=new MailReader(0,TableModelsList);
     TicketManager* manager=new TicketManager(0,TableModelsList);
 
@@ -120,11 +166,11 @@ int main(int argc, char *argv[])
 
 
 
-
+/*
     QQmlApplicationEngine engine;
-    //engine.load(QUrl(QLatin1String("qrc:/main.qml")));
-    //if (engine.rootObjects().isEmpty())
-      //  return -1;
-
+    engine.load(QUrl(QLatin1String("qrc:/main.qml")));
+    if (engine.rootObjects().isEmpty())
+        return -1;
+*/
     return app.exec();
 }

@@ -6,6 +6,11 @@
 #include <QDebug>
 #include <QSqlError>
 #include <QTextCodec>
+#include <QThread>
+#include <QDir>
+#include <QMutex>
+#include <QSettings>
+
 Customer::Customer(QObject *parent):QObject(),m_Id(),m_ErpId(),m_Name(),\
   m_Location(),m_City(),m_County(),m_Address(),m_Email(),\
   m_Phone1(),m_Phone2(),m_PC()
@@ -138,6 +143,8 @@ void Customer::setErpId(int ErpId)
 
 void Customer::persist(const QList<QAbstractItemModel*> &tableList)
 {
+    QMutex mutex;
+    mutex.lock();
     AlgoSqlTableModel *cl= qobject_cast<AlgoSqlTableModel*> (tableList.at(0));
     AlgoSqlTableModel *ce= qobject_cast<AlgoSqlTableModel*> (tableList.at(1));
     AlgoSqlTableModel *cte= qobject_cast<AlgoSqlTableModel*> (tableList.at(6));
@@ -148,25 +155,36 @@ void Customer::persist(const QList<QAbstractItemModel*> &tableList)
 
     if (ce->rowCount()==0)
     {
-        qDebug()<<"2st step:Name:"<<Name();
+
+        setCode(createErpCode(ce));
         createToErp(cte);
-        fetchLastErpid(ce);
-        qDebug()<<"1.createtoLocal";
+
+        setErpId(fetchLastErpid(ce));
+        qDebug()<<"ERPID:"<<ErpId();
+
         createToLocal(cl);
+        mutex.unlock();
         return;
     }
     else
     {
-        setErpId(ce->data(ce->index(0,0)).toInt());
+        qDebug()<<"FFFFFFFOOOOOOUUUUUNNNFFFFFFFFFF";
+
+        setErpId(ce->data(ce->index(0,3)).toInt());
+        setCode(ce->data(ce->index(0,4)).toString());
         QVariant erpid=ErpId();
+
         QSqlQuery query("select distinct ccceteria from findoc where trdr="+erpid.toString()+" order by trndate desc",ce->database());
+
         query.exec();
         query.next();
         if (query.value(0).toInt()!=OriginatorId())
         {
+            setCode(createErpCode(ce));
             createToErp(cte);
-            qDebug()<<"2.createtoLocal";
+            setErpId(fetchLastErpid(ce));
             createToLocal(cl);
+            mutex.unlock();
             return;
         }
 
@@ -177,16 +195,20 @@ void Customer::persist(const QList<QAbstractItemModel*> &tableList)
         if (loc1.Long()==loc2.Long() && loc1.Lat()==loc2.Lat())
         {
             QVariant cerpid=ErpId();
+            qDebug()<<"2 Query";
             QSqlQuery query("select id from Customer where erpid= "+cerpid.toString());
+            qDebug()<<"2 Query";
             query.exec();
             query.next();
             setId(query.value(0).toInt());
         }
         else
         {
+            setCode(createErpCode(ce));
             createToErp(cte);
-            qDebug()<<"3.createtoLocal";
+            setErpId(fetchLastErpid(ce));
             createToLocal(cl);
+            mutex.unlock();
             return;
         }
 
@@ -212,22 +234,45 @@ void Customer::createToErp(AlgoSqlTableModel* model)
 {
     model->setFilter("");
     model->select();
+    qDebug()<<"ErpId:"<<ErpId()<<"ID:"<<Id();
 
     QSqlRecord r= model->record();
 
-
+    r.setValue("code",Code());
     r.setValue("address",Address());
     r.setValue("city",City());
-    r.setValue("cccperioxi",Location());
-    r.setValue("cccnomos",County());
+    r.setValue("cccperioxi",Location().left(30));
+    r.setValue("cccnomos",County().left(30));
     r.setValue("phone01",Phone1());
-    r.setValue("phone02",Phone2());
-    r.setValue("cccdbf",LoopNumber());
+    r.setValue("phone02",Phone2().left(20));
+    r.setValue("cccphone02",Phone2());
+    r.setValue("cccdbf",LoopNumber().left(30));
     r.setValue("name",Name());
+    r.setValue("ccceteria",OriginatorId());
+    r.setValue("isins",0);
+    r.remove(0);
     model->insertRecord(-1,r);
-    qDebug()<<"3rd!st step2:";
+
     if(model->submitAll()) {
+
+        qDebug()<<"Commit";
         model->database().commit();
+
+        ag:QThread::msleep(2000);
+
+        QDir::setCurrent("c:\\algo\\autoimport");
+        system("AutoRunCusImport.bat");
+        QThread::msleep(2000);
+        QString querystr="select trdr from trdr where sodtype=13 and code='"+Code()+"'";
+        qDebug()<< querystr;
+        QSqlDatabase db(model->database());
+        //db.open();
+        QSqlQuery query(db);
+        query.exec(querystr);
+        if (!query.next())
+            goto ag;
+
+
     }
     else {
         model->database().rollback();
@@ -236,7 +281,10 @@ void Customer::createToErp(AlgoSqlTableModel* model)
                       model->lastError().text();
 
     }
+
     model->select();
+
+
 
 }
 
@@ -257,7 +305,7 @@ void Customer::createToLocal(AlgoSqlTableModel* model)
     QSqlRecord r= model->record();
 
     r.setValue("erpid",ErpId());
-    r.setValue("ccctest1","58");
+
     r.setValue("lockid",0);
     r.setValue("name",Name());
     r.setValue("location",Location());
@@ -289,6 +337,29 @@ void Customer::createToLocal(AlgoSqlTableModel* model)
     model->select();
 
     setId(model->data(model->index(0,0)).toInt());
+
+}
+
+QString Customer::createErpCode(AlgoSqlTableModel* model)
+{
+
+
+    QString querystr="select max(Cast(code AS INTEGER)) from trdr where sodtype=13";
+    QSqlDatabase db(model->database());
+    //db.open();
+    QSqlQuery query(db);
+    query.prepare(querystr);
+    query.exec();
+    query.next();
+    int lastCode=query.value(0).toInt()+1;
+    QVariant vCode=lastCode;
+    QString code=QString("%1").arg(vCode.toInt(),6,10,QChar('0'));
+    //db.close();
+    qDebug()<<"ERPCODE:"<<code;
+    return code;
+
+
+
 
 }
 
@@ -332,15 +403,23 @@ void Customer::setLatitude(double Latitude)
     m_Latitude = Latitude;
 }
 
+
 int Customer::fetchLastErpid(AlgoSqlTableModel *model)
 {
-    model->setFilter("");
-    model->setSort(3,Qt::DescendingOrder);
-    model->select();
 
-    setErpId(model->data(model->index(0,3)).toInt());
+    QString querystr="select trdr from trdr where sodtype=13 and code='"+Code()+"'";
+    qDebug()<< querystr;
+    QSqlDatabase db(model->database());
+    //db.open();
+    QSqlQuery query(db);
+    ag:query.exec(querystr);
+    if (!query.next())
+        goto ag;
 
-    qDebug()<<"ERPID:"<<model->data(model->index(0,3))<<":"<<ErpId();
+
+    return query.value(0).toInt();
+
+
 }
 
 

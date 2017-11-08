@@ -27,7 +27,7 @@ private:
     QSslSocket m_socket;
     int m_ResponseId;
     bool m_ResponseComplete;
-    QString m_Response;
+    QByteArray m_Response;
     QList<Email*> m_EmailList;
     void processEmailList();
     QList<QAbstractItemModel*> m_TableList;

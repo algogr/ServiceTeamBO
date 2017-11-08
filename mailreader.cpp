@@ -3,6 +3,8 @@
 #include "customer.h"
 #include <QTimer>
 #include <QEventLoop>
+#include <QSettings>
+#include <QDir>
 
 MailReader::MailReader(QObject *parent,const QList<QAbstractItemModel*> &tablelist) : QObject(parent),m_socket(),\
     m_ResponseId(0),m_NewList(),m_ResponseComplete(true),m_Response(),\
@@ -33,9 +35,10 @@ void MailReader::connectIMAP()
     connect(&m_socket,SIGNAL(readyRead()),this,SLOT(readyRead()));
 
     //TODO Check netwotk connection
-    //TODO Parametetric
-    m_socket.connectToHostEncrypted("imap.gmail.com", 993);
-
+    QString settingsFile=QDir::currentPath()+"/settings.ini";
+    QSettings *settings=new QSettings(settingsFile,QSettings::IniFormat);
+    m_socket.connectToHostEncrypted(settings->value("imapHostname").toString(), settings->value("imapPort").toInt());
+    delete settings;
 }
 
 void MailReader::clearNewList(int start)
@@ -63,7 +66,7 @@ void MailReader::clearNewList(int start)
 void MailReader::parseTicketList(int start)
 {
     m_ResponseId=start;
-    qDebug()<<"Before clear:"<<m_NewTicketList.size()<<":"<<m_ResponseId-20000;
+
     if (m_NewTicketList.size()==m_ResponseId-20000)
     {
         m_ResponseComplete=true;
@@ -85,7 +88,7 @@ void MailReader::processEmailList()
 
     for (int i=0;i<m_EmailList.size();i++)
     {
-        //TODO EDO EIMAI 1
+
         Email* email=m_EmailList[i];
         email->createTicket(m_TableList);
 
@@ -101,8 +104,10 @@ void MailReader::connected()
 {
     qDebug()<<"EDO EIMAI";
 
-    //TODO Parametetric
-    QString credentials="001 login algosakis@gmail.com v@$230698";
+    QString settingsFile=QDir::currentPath()+"/settings.ini";
+    QSettings *settings=new QSettings(settingsFile,QSettings::IniFormat);
+    QString credentials="001 login "+settings->value("imapUser").toString()+" "+settings->value("imapPass").toString();
+    delete settings;
     m_socket.write(credentials.toUtf8());
     m_socket.write("\r\n");
 }
@@ -162,14 +167,15 @@ void MailReader::readyRead()
 
         }
         m_ResponseComplete=true;
-        //qDebug()<<"1:"<<m_Response;
+
         QRegExp regxp1("SEARCH ");
         QRegExp regxp2("\r\nSR1");
 
         int start=regxp1.indexIn(m_Response)+7;
         int end=regxp2.indexIn(m_Response);
         m_Response=m_Response.mid(start,end-start);
-        m_NewList=m_Response.split(" ");
+        QString str=m_Response;
+        m_NewList=str.split(" ");
         //qDebug()<<"2:"<<m_Response;
         //qDebug()<<"3:"<<m_NewList;
         clearNewList(10000);
@@ -222,6 +228,7 @@ void MailReader::readyRead()
         m_ResponseComplete=false;
         while(m_socket.bytesAvailable()>0)
         {
+
             m_Response+=m_socket.readAll();
 
 
@@ -233,6 +240,7 @@ void MailReader::readyRead()
         {
             m_ResponseComplete=true;
             Email* email=new Email;
+
             email->setBody(m_Response);
             m_EmailList.append(email);
 
