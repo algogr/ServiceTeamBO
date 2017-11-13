@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QTimer>
+#include "mailreader.h"
 #include <QAbstractItemModel>
 
 class TicketManager : public QObject
@@ -14,6 +15,7 @@ public:
 private:
     QTimer m_Timer;
     QList<QAbstractItemModel*> m_TableList;
+    MailReader* m_EmailReader;
 signals:
 
 public slots:

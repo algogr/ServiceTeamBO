@@ -11,6 +11,7 @@ class MailReader : public QObject
     Q_OBJECT
 public:
     explicit MailReader(QObject *parent = nullptr,const QList<QAbstractItemModel*> &tableList=QList<QAbstractItemModel*>());
+    ~MailReader();
     QList<int> fetchNewUIDs();
     Email* readMail(int UID);
     void connectIMAP();

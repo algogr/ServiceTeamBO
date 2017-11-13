@@ -13,57 +13,68 @@
 #include <QFile>
 #include <QDir>
 #include <QSettings>
+
+
 int main(int argc, char *argv[])
 {
-    QFile st(QDir::currentPath()+"/settings.ini");
-    QString settingsFile=QDir::currentPath()+"/settings.ini";
-    QSettings *settings=new QSettings(settingsFile,QSettings::IniFormat);
-
-    if (!st.open(QIODevice::ReadOnly | QIODevice::Text))
-    {
-
-        settings->setValue("dsnMySQL","serviceteam");
-        settings->setValue("hostnameMySQL","localhost");
-        settings->setValue("dsnSQLServer","soft1");
-        settings->setValue("userSQLServer","sa");
-        settings->setValue("passSQLServer","tt123!@#");
-        settings->setValue("excelFullPath","c:\\jim\\tsolakidi.xls");
-        settings->setValue("batchFilesPath","C:\\algo\\AutoImport\\");
-        settings->setValue("cusBatchFilename","AutoRunCusImport.bat");
-        settings->setValue("salBatchFilename","AutoRunSalImport.bat");
-        settings->setValue("imapHostname","imap.gmail.com");
-        settings->setValue("imapPort",993);
-        settings->setValue("imapUser","algosakis@gmail.com");
-        settings->setValue("imapPass","v@$230698");
-        settings->sync();
-    }
-    st.close();
-
 
 
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QGuiApplication app(argc, argv);
 
+
+
+    QFile st(QCoreApplication::applicationDirPath()+"/settings.ini");
+    qDebug()<<"DIR1:"<<QCoreApplication::applicationDirPath();
+    QString settingsFile=QCoreApplication::applicationDirPath() +"/settings.ini";
+    QSettings settings(settingsFile,QSettings::IniFormat);
+
+    if (!st.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+
+        settings.setValue("dsnMySQL","serviceteam");
+        settings.setValue("hostnameMySQL","localhost");
+        settings.setValue("dsnSQLServer","soft1");
+        settings.setValue("userSQLServer","sa");
+        settings.setValue("passSQLServer","tt123!@#");
+        settings.setValue("excelFullPath","c:\\jim\\tsolakidi.xls");
+        settings.setValue("batchFilesPath","C:\\algo\\AutoImport\\");
+        settings.setValue("cusBatchFilename","AutoRunCusImport.bat");
+        settings.setValue("salBatchFilename","AutoRunSalImport.bat");
+        settings.setValue("imapHostname","imap.gmail.com");
+        settings.setValue("imapPort",993);
+        settings.setValue("imapUser","algosakis@gmail.com");
+        settings.setValue("imapPass","v@$230698");
+        settings.sync();
+    }
+    st.close();
+
+
+
+
+
+
+
     QList <QAbstractItemModel*> TableModelsList;
 
 
 
-    QSqlDatabase db1=QSqlDatabase::addDatabase("QODBC3",settings->value("dsnMySQL").toString());
-    db1.setDatabaseName(settings->value("dsnMySQL").toString());
-    db1.setHostName(settings->value("hostnameMySQL").toString());
+    QSqlDatabase db1=QSqlDatabase::addDatabase("QODBC3",settings.value("dsnMySQL").toString());
+    db1.setDatabaseName(settings.value("dsnMySQL").toString());
+    db1.setHostName(settings.value("hostnameMySQL").toString());
 
 
 
-    QSqlDatabase db2=QSqlDatabase::addDatabase("QODBC3",settings->value("dsnSQLServer").toString());
+    QSqlDatabase db2=QSqlDatabase::addDatabase("QODBC3",settings.value("dsnSQLServer").toString());
 
-    db2.setDatabaseName(settings->value("dsnSQLServer").toString());
+    db2.setDatabaseName(settings.value("dsnSQLServer").toString());
 
-    db2.setUserName(settings->value("userSQLServer").toString());
-    db2.setPassword(settings->value("passSQLServer").toString());
+    db2.setUserName(settings.value("userSQLServer").toString());
+    db2.setPassword(settings.value("passSQLServer").toString());
 
 
     QSqlDatabase db3=QSqlDatabase::addDatabase("QODBC3");
-    db3.setDatabaseName("DRIVER={Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)};DBQ="+QString(settings->value("excelFullPath").toString()));
+    db3.setDatabaseName("DRIVER={Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)};DBQ="+QString(settings.value("excelFullPath").toString()));
 
 
     if (db1.open()==false)
@@ -159,7 +170,7 @@ int main(int argc, char *argv[])
     TableModelsList.append(ticketEModel); //5
     TableModelsList.append(customerTempEModel);//6
 
-    //MailReader* rd=new MailReader(0,TableModelsList);
+
     TicketManager* manager=new TicketManager(0,TableModelsList);
 
 

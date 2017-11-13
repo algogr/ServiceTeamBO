@@ -171,7 +171,22 @@ Ticket *Email::createTicket(const QList<QAbstractItemModel *> &tableList)
     ticket->persist(tableList);
     QThread::msleep(5000);
 
-mutex.unlock();
+    qDebug()<<"1DEKETE";
+    delete ticket;
+    ticket=nullptr;
+    qDebug()<<"2DEKETE";
+    delete customer;
+    customer=nullptr;
+    qDebug()<<"3DEKETE";
+    delete originator;
+    originator=nullptr;
+
+    mutex.unlock();
+    qDebug()<<"4DEKETE";
+    delete this;
+
+
+
 
 
 

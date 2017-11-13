@@ -5,6 +5,7 @@
 #include <QEventLoop>
 #include <QSettings>
 #include <QDir>
+#include <QCoreApplication>
 
 MailReader::MailReader(QObject *parent,const QList<QAbstractItemModel*> &tablelist) : QObject(parent),m_socket(),\
     m_ResponseId(0),m_NewList(),m_ResponseComplete(true),m_Response(),\
@@ -12,10 +13,15 @@ MailReader::MailReader(QObject *parent,const QList<QAbstractItemModel*> &tableli
 {
 
     m_TableList=tablelist;
-
+    qDebug()<<"1.EmailReader";
     connectIMAP();
 
 
+}
+
+MailReader::~MailReader()
+{
+    m_socket.disconnectFromHost();
 }
 
 QList<int> MailReader::fetchNewUIDs()
@@ -30,15 +36,20 @@ QString decodeQuotedPrintable(const QString &text);
 
 void MailReader::connectIMAP()
 {
+    qDebug()<<"2.EmailReader";
 
     connect(&m_socket,SIGNAL(encrypted()),this,SLOT(connected()));
     connect(&m_socket,SIGNAL(readyRead()),this,SLOT(readyRead()));
-
+    qDebug()<<"3.EmailReader";
     //TODO Check netwotk connection
-    QString settingsFile=QDir::currentPath()+"/settings.ini";
-    QSettings *settings=new QSettings(settingsFile,QSettings::IniFormat);
-    m_socket.connectToHostEncrypted(settings->value("imapHostname").toString(), settings->value("imapPort").toInt());
-    delete settings;
+
+    QString settingsFile=QCoreApplication::applicationDirPath()+"/settings.ini";
+
+    QSettings settings(settingsFile,QSettings::IniFormat);
+    m_socket.connectToHostEncrypted(settings.value("imapHostname").toString(), settings.value("imapPort").toInt());
+    qDebug()<<"4.EmailReader"<<settings.value("imapHostname").toString()<<"-"<<settings.value("imapPort").toInt();
+
+
 }
 
 void MailReader::clearNewList(int start)
@@ -95,7 +106,7 @@ void MailReader::processEmailList()
 
 
     }
-    this->deleteLater();
+
 
 
 }
@@ -104,10 +115,9 @@ void MailReader::connected()
 {
     qDebug()<<"EDO EIMAI";
 
-    QString settingsFile=QDir::currentPath()+"/settings.ini";
-    QSettings *settings=new QSettings(settingsFile,QSettings::IniFormat);
-    QString credentials="001 login "+settings->value("imapUser").toString()+" "+settings->value("imapPass").toString();
-    delete settings;
+    QString settingsFile=QCoreApplication::applicationDirPath()+"/settings.ini";
+    QSettings settings(settingsFile,QSettings::IniFormat);
+    QString credentials="001 login "+settings.value("imapUser").toString()+" "+settings.value("imapPass").toString();
     m_socket.write(credentials.toUtf8());
     m_socket.write("\r\n");
 }
