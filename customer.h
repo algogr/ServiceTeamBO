@@ -55,8 +55,7 @@ public:
     int Id() const;
     void setId(int Id);
 
-    int ErpId() const;
-    void setErpId(int ErpId);
+
 
 
 
@@ -77,11 +76,9 @@ public:
 
 private:
     QString m_Code,m_Name,m_Location,m_City,m_County,m_Address,m_Email,m_Phone1,m_Phone2,m_PC,m_LoopNumber;
-    int m_Id,m_ErpId,m_OriginatorId;
+    int m_Id,m_OriginatorId;
     double m_Longitude,m_Latitude;
-    int fetchLastErpid(AlgoSqlTableModel *model);
     void createToErp(AlgoSqlTableModel* model);
-    void createToLocal(AlgoSqlTableModel* model);
     QString createErpCode(AlgoSqlTableModel* model);
 
 

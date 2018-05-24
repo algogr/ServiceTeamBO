@@ -11,7 +11,7 @@
 #include <QMutex>
 #include <QSettings>
 
-Customer::Customer(QObject *parent):QObject(),m_Id(),m_ErpId(),m_Name(),\
+Customer::Customer(QObject *parent):QObject(),m_Id(),m_Name(),\
   m_Location(),m_City(),m_County(),m_Address(),m_Email(),\
   m_Phone1(),m_Phone2(),m_PC()
 
@@ -131,23 +131,15 @@ void Customer::setId(int Id)
     m_Id = Id;
 }
 
-int Customer::ErpId() const
-{
-    return m_ErpId;
-}
 
-void Customer::setErpId(int ErpId)
-{
-    m_ErpId = ErpId;
-}
 
 void Customer::persist(const QList<QAbstractItemModel*> &tableList)
 {
     QMutex mutex;
     mutex.lock();
-    AlgoSqlTableModel *cl= qobject_cast<AlgoSqlTableModel*> (tableList.at(0));
-    AlgoSqlTableModel *ce= qobject_cast<AlgoSqlTableModel*> (tableList.at(1));
-    AlgoSqlTableModel *cte= qobject_cast<AlgoSqlTableModel*> (tableList.at(6));
+
+    AlgoSqlTableModel *ce= qobject_cast<AlgoSqlTableModel*> (tableList.at(0));
+    AlgoSqlTableModel *cte= qobject_cast<AlgoSqlTableModel*> (tableList.at(3));
     //TODO What to do if exists (RETRIVE???)
     ce->setFilter("phone01='"+Phone1()+"'");
     ce->setSort(13,Qt::AscendingOrder);
@@ -159,10 +151,6 @@ void Customer::persist(const QList<QAbstractItemModel*> &tableList)
         setCode(createErpCode(ce));
         createToErp(cte);
 
-        setErpId(fetchLastErpid(ce));
-        qDebug()<<"ERPID:"<<ErpId();
-
-        createToLocal(cl);
         mutex.unlock();
         return;
     }
@@ -170,9 +158,9 @@ void Customer::persist(const QList<QAbstractItemModel*> &tableList)
     {
         qDebug()<<"FFFFFFFOOOOOOUUUUUNNNFFFFFFFFFF";
 
-        setErpId(ce->data(ce->index(0,3)).toInt());
+
         setCode(ce->data(ce->index(0,4)).toString());
-        QVariant erpid=ErpId();
+        QVariant erpid=ce->data(ce->index(0,3)).toInt();
 
         QSqlQuery query("select distinct ccceteria from findoc where trdr="+erpid.toString()+" order by trndate desc",ce->database());
 
@@ -182,12 +170,12 @@ void Customer::persist(const QList<QAbstractItemModel*> &tableList)
         {
             setCode(createErpCode(ce));
             createToErp(cte);
-            setErpId(fetchLastErpid(ce));
-            createToLocal(cl);
+
             mutex.unlock();
             return;
         }
-
+//Check  with google maps-addresses
+        /*
         QString address1=ce->data(ce->index(0,24)).toString()+"+"+ce->data(ce->index(0,25)).toString();
         QString address2=Address()+"+"+Location()+"+"+City();
         AlgoLocation loc1(0,address1);
@@ -204,13 +192,12 @@ void Customer::persist(const QList<QAbstractItemModel*> &tableList)
         }
         else
         {
+        */
             setCode(createErpCode(ce));
             createToErp(cte);
-            setErpId(fetchLastErpid(ce));
-            createToLocal(cl);
             mutex.unlock();
             return;
-        }
+        //}
 
 
 
@@ -234,7 +221,7 @@ void Customer::createToErp(AlgoSqlTableModel* model)
 {
     model->setFilter("");
     model->select();
-    qDebug()<<"ErpId:"<<ErpId()<<"ID:"<<Id();
+
 
     QSqlRecord r= model->record();
 
@@ -263,7 +250,7 @@ void Customer::createToErp(AlgoSqlTableModel* model)
         QDir::setCurrent("c:\\algo\\autoimport");
         system("AutoRunCusImport.bat");
         QThread::msleep(2000);
-        QString querystr="select trdr from trdr where sodtype=13 and code='"+Code()+"'";
+        QString querystr="select cccsubscriber from cccsubscriber where code='"+Code()+"'";
         qDebug()<< querystr;
         QSqlDatabase db(model->database());
         //db.open();
@@ -288,74 +275,25 @@ void Customer::createToErp(AlgoSqlTableModel* model)
 
 }
 
-void Customer::createToLocal(AlgoSqlTableModel* model)
-{
-
-    model->setFilter("");
-    model->select();
-    //TODO Problem with google maps
-    /*
-    AlgoLocation loc(0,Address());
-
-    setLatitude(loc.Lat());
-    setLongitude(loc.Long());
-    setPC(loc.PostalCode());
-    */
-
-    QSqlRecord r= model->record();
-
-    r.setValue("erpid",ErpId());
-
-    r.setValue("lockid",0);
-    r.setValue("name",Name());
-    r.setValue("location",Location());
-    r.setValue("city",City());
-    r.setValue("county",County());
-    r.setValue("address",Address());
-    r.setValue("phone1",Phone1());
-    r.setValue("phone2",Phone2());
-    r.setValue("postalcode",PC());
-    r.setValue("loopnumber",LoopNumber());
-    r.setValue("originatorid",OriginatorId());
-    r.setValue("longtitude",Longitude());
-    r.setValue("latitude",Latitude());
-
-
-    model->insertRecord(-1,r);
-    if(model->submitAll()) {
-        model->database().commit();
-    }
-    else {
-        model->database().rollback();
-                qDebug() << "Database Write Error" <<
-                     "The database reported an error: " <<
-                      model->lastError().text();
-
-    }
-
-    model->setSort(0,Qt::DescendingOrder);
-    model->select();
-
-    setId(model->data(model->index(0,0)).toInt());
-
-}
 
 QString Customer::createErpCode(AlgoSqlTableModel* model)
 {
 
 
-    QString querystr="select max(Cast(code AS INTEGER)) from trdr where sodtype=13";
+    QString querystr="select max(Cast(code AS INTEGER)) from CCCSUBSCRIBER";
     QSqlDatabase db(model->database());
     //db.open();
     QSqlQuery query(db);
     query.prepare(querystr);
     query.exec();
-    query.next();
-    int lastCode=query.value(0).toInt()+1;
+    int lastCode;
+    if (!query.next())
+        lastCode=0;
+    else
+        lastCode=query.value(0).toInt()+1;
     QVariant vCode=lastCode;
     QString code=QString("%1").arg(vCode.toInt(),6,10,QChar('0'));
-    //db.close();
-    qDebug()<<"ERPCODE:"<<code;
+    qDebug()<<"SUBSCRIBERCODE:"<<code;
     return code;
 
 
@@ -403,23 +341,5 @@ void Customer::setLatitude(double Latitude)
     m_Latitude = Latitude;
 }
 
-
-int Customer::fetchLastErpid(AlgoSqlTableModel *model)
-{
-
-    QString querystr="select trdr from trdr where sodtype=13 and code='"+Code()+"'";
-    qDebug()<< querystr;
-    QSqlDatabase db(model->database());
-    //db.open();
-    QSqlQuery query(db);
-    ag:query.exec(querystr);
-    if (!query.next())
-        goto ag;
-
-
-    return query.value(0).toInt();
-
-
-}
 
 

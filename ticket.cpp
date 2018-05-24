@@ -8,7 +8,7 @@
 #include <QMutex>
 #include <QSettings>
 
-Ticket::Ticket(QObject *parent):QObject(),m_id(),m_ErpId(),m_Incident(),\
+Ticket::Ticket(QObject *parent):QObject(),m_id(),m_Incident(),\
     m_Originator(),m_Customer(),m_Title(),m_Service(),\
     m_ReportedDate(),m_Priority(),m_Description(),\
     m_CustomerTicketNo(),m_AppointmentFrom(),m_AppointmentTo()
@@ -141,38 +141,23 @@ void Ticket::setId(int id)
     m_id = id;
 }
 
-int Ticket::ErpId() const
-{
-    return m_ErpId;
-}
 
-void Ticket::setErpId(int ErpId)
-{
-    m_ErpId = ErpId;
-}
 
 void Ticket::persist(const QList<QAbstractItemModel *> &tableList)
 {
     QMutex mutex;
     mutex.lock();
-    AlgoSqlTableModel *tl= qobject_cast<AlgoSqlTableModel*> (tableList.at(4));
-
-    tl->setTable("Ticket");
-    qDebug()<<"Rows:"<<tl->rowCount();
-    tl->setFilter("incident='"+Incident()+"'");
-    tl->select();
+    AlgoSqlTableModel *te= qobject_cast<AlgoSqlTableModel*> (tableList.at(2));
+    qDebug()<<"Rows:"<<te->rowCount();
+    te->setFilter("cccincident='"+Incident()+"'");
+    te->select();
 
     //TODO  Add code when ERP connection is ready
-    if (tl->rowCount()==0)
+    if (te->rowCount()==0)
     {
 
-        tl->setFilter("");
-        tl->select();
-
-        createToLocal(tl);
-
-
-        AlgoSqlTableModel *te= qobject_cast<AlgoSqlTableModel*> (tableList.at(5));
+        te->setFilter("");
+        te->select();
 
         createToErp(te);
 
@@ -324,39 +309,4 @@ void Ticket::createToErp(AlgoSqlTableModel *model)
 
 }
 
-void Ticket::createToLocal(AlgoSqlTableModel *model)
-{
-    QSqlRecord r= model->record();
-    r.setValue("originatorid",m_Originator->Id());
-    qDebug()<<"OriginatorId"<<m_Originator->Id();
-    qDebug()<<"CustomerId"<<m_Customer->Id();
-    r.setValue("cusid",m_Customer->Id());
-    r.setValue("erpcusid",m_Customer->ErpId());
-    r.setValue("title",Title());
-    r.setValue("service","");
-    r.setValue("reporteddate",ReportedDate());
-    r.setValue("priority",Priority());
-    r.setValue("description",Description());
-    r.setValue("customerticketno",CustomerTicketNo());
-    r.setValue("appointmentfrom",AppointmentFrom());
-    r.setValue("appointmentto",AppointmentTo());
-    r.setValue("incident",Incident());
-    r.setValue("department",Department());
-    r.remove(0);
 
-    model->insertRecord(-1,r);
-    if(model->submitAll()) {
-        qDebug()<<"Commit:"<<Incident();
-        model->database().commit();
-    }
-    else {
-        model->database().rollback();
-                qDebug() << "Database Write Error" <<
-                     "The database reported an error: " <<
-                      model->lastError().text();
-
-    }
-
-    return;
-
-}

@@ -45,22 +45,14 @@ void Originator::setErpId(int ErpId)
 void Originator::persist(const QList<QAbstractItemModel *> &tableList)
 {
 
-    retrieve(tableList);
+
 
 }
 
 
 void Originator::retrieve(const QList<QAbstractItemModel*> &tableList)
 {
-    AlgoSqlTableModel *ol= qobject_cast<AlgoSqlTableModel*> (tableList.at(2));
-    QVariant erpid=ErpId();
 
-    ol->setTable("Originator");
-    ol->setFilter("erpid="+erpid.toString());
-    ol->select();
-
-    setId(ol->data(ol->index(0,0)).toInt());
-    setName(ol->data(ol->index(0,2)).toString());
 
 
 }

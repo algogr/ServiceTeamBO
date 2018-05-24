@@ -52,8 +52,6 @@ public:
     int id() const;
     void setId(int id);
 
-    int ErpId() const;
-    void setErpId(int ErpId);
 
     void persist(const QList<QAbstractItemModel*> &tableList);
     void retrieve(const QList<QAbstractItemModel*> &tableList);
@@ -87,9 +85,9 @@ private:
     Originator* m_Originator;
     Customer* m_Customer;
     QDateTime m_ReportedDate,m_AppointmentFrom,m_AppointmentTo,m_trnDate;
-    int m_id,m_ErpId,m_Priority;
+    int m_id,m_Priority;
     void createToErp(AlgoSqlTableModel* model);
-    void createToLocal(AlgoSqlTableModel* model);
+
 
 
 
